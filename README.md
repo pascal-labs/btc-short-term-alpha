@@ -2,7 +2,7 @@
 
 Late-window entry strategy for 15-minute BTC binary markets with geometric balance optimization.
 
-Binary BTC markets on Polymarket resolve every 15 minutes. Price evolves stochastically within each window -- once BTC has moved far enough in one direction, the binary outcome is near-certain but the contract still offers a discount because resolution hasn't occurred yet. A 7-feature linear scoring function identifies entry points in the late window. The optimizer selected a single dominant side -- the signal was asymmetric, not symmetric. Optimized via a novel geometric balance objective that prevents degenerate solutions, validated on 257 walk-forward trades at 77% win rate.
+Binary BTC markets on Polymarket resolve every 15 minutes. Price evolves stochastically within each window -- once BTC has moved far enough in one direction, the binary outcome is near-certain but the contract still offers a discount because resolution hasn't occurred yet. A 7-feature linear scoring function identifies entry points in the late window. The optimizer selected a single dominant side -- the signal was asymmetric, not symmetric. Optimized via a novel geometric balance objective that prevents degenerate solutions, validated on 544 walk-forward trades at 72.4% win rate (71.3% on holdout).
 
 ## Architecture
 
@@ -51,11 +51,13 @@ Binary BTC markets on Polymarket resolve every 15 minutes. Price evolves stochas
 
 | Metric | Value |
 |--------|-------|
-| Walk-forward trades | 257 |
-| Win rate | 77% |
+| Walk-forward trades | 544 |
+| Win rate | 72.4% (71.3% holdout) |
+| R (win/loss ratio) | 0.90 |
 | Dominant side | Single side (optimizer-selected, redacted) |
 | CV folds | 5 (expanding window) |
 | Parameters | 30 (15 YES + 15 NO) |
+| Execution | FAK orders, $0.10 slippage assumption |
 | Optimization | Geometric balance objective |
 
 ## Figures

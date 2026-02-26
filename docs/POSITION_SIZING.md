@@ -14,7 +14,7 @@ In the binary market context:
 - R = (1 - c) / c (reward-to-risk ratio)
 - f* = p - (1-p) * c / (1-c) = p - (1-p) / R
 
-With a 77% win rate and typical entry prices around PARAM_PLACEHOLDER, the theoretical Kelly fraction is substantial. In practice, we use a fraction of Kelly (BASE_KELLY = PARAM_PLACEHOLDER) for several reasons:
+With a 72% win rate and typical entry prices around PARAM_PLACEHOLDER, the theoretical Kelly fraction is substantial. In practice, we use a fraction of Kelly (BASE_KELLY = PARAM_PLACEHOLDER) for several reasons:
 
 1. **Estimation error**: The true win probability p is unknown. Overbetting due to overestimated p causes faster bankroll depletion than underbetting.
 2. **Non-stationarity**: The edge changes over time. Fractional Kelly provides a buffer against edge deterioration.

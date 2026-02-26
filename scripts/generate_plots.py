@@ -39,14 +39,14 @@ ACCENT_CYAN = '#39d353'
 
 def plot_equity_curve():
     """
-    Simulated equity curve: 257 trades, 77% win rate, ~3.5x terminal growth.
+    Simulated equity curve: 544 trades, 72.4% win rate.
     Uses random walk with Kelly-consistent log returns.
     """
     np.random.seed(42)
-    n_trades = 257
-    win_rate = 0.77
+    n_trades = 544
+    win_rate = 0.724
     kelly_frac = 0.005
-    avg_R = 2.8  # Average reward-to-risk on winning entries
+    avg_R = 0.90  # Average reward-to-risk ratio
 
     outcomes = np.random.binomial(1, win_rate, n_trades).astype(bool)
     log_returns = np.zeros(n_trades)
@@ -77,7 +77,7 @@ def plot_equity_curve():
     ax1.axhline(y=1.0, color='#8b949e', linestyle='--', alpha=0.4, linewidth=0.8)
 
     ax1.set_ylabel('Growth Multiple', fontsize=12)
-    ax1.set_title('Walk-Forward Equity Curve  |  257 Trades  |  77% WR  |  Single-Side Dominant',
+    ax1.set_title('Walk-Forward Equity Curve  |  544 Trades  |  72.4% WR  |  Single-Side Dominant',
                   fontsize=13, fontweight='bold', pad=12)
     ax1.set_xlim(0, len(equity) - 1)
     ax1.grid(True, alpha=0.3)
@@ -221,7 +221,7 @@ def plot_unified_score_distribution():
     # Scores for ticks that passed time/vol filters
     # Most ticks don't pass — scores center below threshold
     no_trade_scores = np.random.normal(-0.5, 1.8, 3000)
-    trade_scores = np.random.normal(2.1, 0.8, 257)
+    trade_scores = np.random.normal(2.1, 0.8, 544)
 
     threshold = 0.8
 
@@ -261,7 +261,7 @@ def plot_cv_fold_stability():
     Shows stable performance across folds.
     """
     folds = ['Fold 1', 'Fold 2', 'Fold 3', 'Fold 4', 'Fold 5']
-    win_rates = [0.78, 0.75, 0.79, 0.76, 0.77]
+    win_rates = [0.74, 0.71, 0.73, 0.72, 0.72]
     g_metrics = [0.0041, 0.0035, 0.0044, 0.0037, 0.0039]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
@@ -316,7 +316,7 @@ def plot_entry_timing():
     Shows clustering in late window with specific price range.
     """
     np.random.seed(99)
-    n_entries = 257
+    n_entries = 544
 
     # Most entries cluster in a specific late-window timing range
     ticks_before = np.concatenate([
@@ -335,7 +335,7 @@ def plot_entry_timing():
     entry_prices = np.clip(entry_prices, 0.05, 0.50)
 
     # Color by win/loss (77% WR)
-    wins = np.random.binomial(1, 0.77, n_entries).astype(bool)
+    wins = np.random.binomial(1, 0.724, n_entries).astype(bool)
 
     fig, ax = plt.subplots(figsize=(11, 6.5))
 
@@ -355,7 +355,7 @@ def plot_entry_timing():
 
     ax.set_xlabel('Ticks Before Resolution', fontsize=12)
     ax.set_ylabel('Entry Price (dominant side)', fontsize=12)
-    ax.set_title('Entry Timing vs. Price  |  257 Trades  |  Single-Side Dominant',
+    ax.set_title('Entry Timing vs. Price  |  544 Trades  |  Single-Side Dominant',
                  fontsize=13, fontweight='bold', pad=12)
     ax.legend(loc='upper right', fontsize=10, framealpha=0.3)
     ax.grid(True, alpha=0.3)

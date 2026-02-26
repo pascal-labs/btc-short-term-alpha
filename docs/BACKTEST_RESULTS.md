@@ -4,39 +4,60 @@
 
 | Metric | Value |
 |--------|-------|
-| Total trades | 257 |
-| Win rate | 77% |
+| Total trades (full set) | 544 |
+| Win rate (full set) | 72.4% |
+| R (win/loss ratio) | 0.90 |
+| Holdout trades | 129 |
+| Holdout win rate | 71.3% |
+| Holdout R | 0.80 |
 | Dominant side | Single side, >95% of entries (side redacted) |
 | CV folds | 5 |
 | Holdout size | 20% |
 | Parameters optimized | 30 |
-| Optimization trials | 500 |
-| Startup trials (random) | 1,500 (pre-TPE exploration) |
+| Execution | Fill-and-kill (FAK) orders |
+| Slippage assumption | $0.10 per contract |
 
-## Cross-Validation Fold Performance
+## Holdout Validation
 
-| Fold | Trades | Win Rate | G_window | G_trade | Geometric Balance |
-|------|--------|----------|----------|---------|-------------------|
-| 1 | 52 | 78% | 0.0032 | 0.0053 | 0.0041 |
-| 2 | 48 | 75% | 0.0028 | 0.0044 | 0.0035 |
-| 3 | 54 | 79% | 0.0035 | 0.0056 | 0.0044 |
-| 4 | 50 | 76% | 0.0030 | 0.0046 | 0.0037 |
-| 5 | 53 | 77% | 0.0031 | 0.0049 | 0.0039 |
+The holdout set (last 20% of market windows, never seen during optimization) provides the most honest performance estimate:
 
-**Robust score**: min(fold_Gs) - 0.5 * std(fold_Gs) = 0.0035 - 0.5 * 0.0003 = 0.0034
+| Metric | CV (in-sample) | Holdout (out-of-sample) |
+|--------|---------------|------------------------|
+| Trades | 544 | 129 |
+| Win rate | 72.4% | 71.3% |
+| R (W/L ratio) | 0.90 | 0.80 |
+| G (per-window growth) | -- | 0.000374 |
 
-The fold stability is the key result. Win rates range from 75% to 79% across folds, and geometric balance scores range from 0.0035 to 0.0044. No fold is dramatically worse than the others, confirming that the parameters generalize across the time period.
+The ~1% WR degradation from CV to holdout is modest and expected -- it represents the gap between optimized and truly out-of-sample performance. The R degradation (0.90 to 0.80) is more significant and reflects that later market windows offered slightly less favorable payoff geometry, likely due to increased competition or changing microstructure.
 
 ## Side Distribution
 
-The optimizer converged on a single-side dominant strategy:
+The optimizer converged on a single-side dominant strategy. The non-dominant side's parameters were effectively disabled (>95% of trades on the dominant side). In production, the non-dominant side could be explicitly disabled to simplify execution.
 
-| Side | Trades | Win Rate |
-|------|--------|----------|
-| Dominant side | 248 | 77.4% |
-| Non-dominant side | 9 | 66.7% |
+## Execution Design
 
-The 9 non-dominant trades that slipped through represent edge cases where the score slightly exceeded the effectively-disabled threshold. In a production implementation, the non-dominant side could be explicitly disabled to simplify the strategy.
+### Fill-and-Kill (FAK) Orders
+
+The strategy uses FAK orders rather than GTC (Good-Til-Cancelled). FAK orders either fill immediately at the specified price or are cancelled -- there's no resting order on the book. This is deliberate:
+
+- **No information leakage**: A resting GTC order signals intent to the market. In thin late-window order books, this would move the price against the strategy before the fill.
+- **Price certainty**: FAK guarantees that if filled, the fill price equals the specified price. No partial fills at worse prices.
+- **Latency tolerance**: The strategy evaluates entry conditions on each tick. If the FAK doesn't fill, the next tick re-evaluates -- the opportunity may still be there at a slightly different price.
+
+### Slippage Assumption
+
+The backtest uses a $0.10 slippage assumption per contract. This is added to the entry price before computing returns:
+
+```
+effective_entry = quoted_price + $0.10
+```
+
+The $0.10 assumption is conservative for typical late-window order book depth. It accounts for:
+- Bid-ask spread crossing
+- Partial depth at the top of book
+- Execution latency between signal and fill
+
+The slippage was chosen based on empirical order book analysis, not optimized -- it's a fixed assumption that the optimizer treats as given.
 
 ## Entry Characteristics
 
@@ -57,20 +78,19 @@ Entries are filtered to low-volatility regimes where the lock-in thesis holds. T
 Using Kelly-consistent log returns:
 
 ```
-Total log return: sum of 257 individual trade log returns
+Total log return: sum of 544 individual trade log returns
 Per-window growth (G_window): total_log_return / n_total_windows
-Per-trade growth (G_trade): total_log_return / 257
-
-Terminal growth multiple: exp(total_log_return) ~ 3.5x
+Per-trade growth (G_trade): total_log_return / 544
+Holdout G: 0.000374 per window
 ```
 
-The terminal growth multiple represents the hypothetical compounded growth if the strategy had been running with consistent position sizing from the start of the walk-forward period to the end.
+The holdout G of 0.000374 represents the per-window growth rate on truly out-of-sample data. This is the compounding rate that drives long-term bankroll growth under the Kelly framework.
 
 ## Honest Limitations
 
 ### In-Sample Optimization Caveat
 
-The 77% win rate and fold stability are from the optimization period (tuning set + holdout). While the walk-forward CV methodology prevents look-ahead bias within the dataset, the overall result is still conditioned on the specific market regime during the backtest period.
+The 72.4% win rate is from the full optimization set. The holdout (71.3% WR, 129 trades) provides a more honest estimate. While the walk-forward CV methodology prevents look-ahead bias within the dataset, the overall result is still conditioned on the specific market regime during the backtest period.
 
 Out-of-sample performance (on truly future data) may differ because:
 - Market microstructure can change (new market makers, different liquidity)
@@ -81,10 +101,10 @@ Out-of-sample performance (on truly future data) may differ because:
 ### Execution Assumptions
 
 The backtest assumes:
-- **Fill-or-kill at quoted price + slippage**: Real fills may be worse, especially for larger sizes
-- **No market impact**: The strategy's orders don't move the market. This is reasonable for small position sizes but may not hold at scale
-- **Constant slippage**: In practice, slippage varies with order book depth and market conditions
-- **No latency**: Real execution has network latency that can cause missed entries or worse fills
+- **FAK at quoted price + $0.10 slippage**: The $0.10 assumption is conservative for typical late-window depth. Real FAK fills match exactly or don't fill.
+- **No market impact**: The strategy's orders don't move the market. This is reasonable for small position sizes but may not hold at scale.
+- **Constant slippage**: In practice, slippage varies with order book depth and market conditions. The fixed $0.10 is a simplification.
+- **No latency**: Real execution has network latency that can cause missed entries or worse fills.
 
 ### Parameter Count Concern
 

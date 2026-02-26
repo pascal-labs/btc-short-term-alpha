@@ -68,6 +68,15 @@ Each market window gets at most one entry. If both YES and NO trigger on the sam
 
 The position is held to resolution -- binary markets resolve automatically, so there's no exit decision.
 
+## Execution: FAK Orders with Slippage Budget
+
+Entries are executed as Fill-and-Kill (FAK) orders with a $0.10 slippage budget. FAK orders either fill immediately at the specified price or are cancelled -- no resting order sits on the book.
+
+This matters for late-window trading:
+- **No information leakage**: A GTC order would signal intent to other participants in a thin order book, moving the price before the fill.
+- **Price certainty**: If the FAK fills, the fill price is exactly as specified. No partial fills at worse levels.
+- **Slippage realism**: The $0.10 assumption accounts for bid-ask crossing and partial depth. This is a fixed conservative assumption, not an optimized parameter -- the optimizer treats it as a given cost of doing business.
+
 ## The Optimizer Found Asymmetry
 
 The optimizer searched a symmetric 30-parameter space: 15 parameters for YES entries and 15 for NO entries. Both sides had identical feature engineering, scoring functions, and filter cascades. The optimizer was free to find any combination.
