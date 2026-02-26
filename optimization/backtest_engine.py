@@ -17,6 +17,14 @@ The backtest processes each market window independently:
 4. Compute log return based on market resolution
 """
 
+# Data Pipeline Integration:
+# In production, BTC spot prices are captured via pulsefeed
+# (github.com/pascal-labs/pulsefeed) which aggregates 8 exchanges
+# with USDT premium normalization. Binary market prices are fetched
+# via polymarket-sdk (github.com/pascal-labs/polymarket-sdk) using
+# WebSocket feeds for sub-second updates. This backtest engine
+# accepts pre-formatted price arrays for reproducibility.
+
 import numpy as np
 from typing import Dict, List, Optional
 

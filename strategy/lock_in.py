@@ -19,6 +19,10 @@ strategy is not symmetric, and attempting to trade both sides would
 degrade performance. Which side dominates is redacted.
 """
 
+# Execution: Production entries use Fill-and-Kill orders via
+# polymarket-sdk (github.com/pascal-labs/polymarket-sdk).
+# See polymarket-sdk/docs/API_ARCHITECTURE.md for CLOB integration.
+
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
