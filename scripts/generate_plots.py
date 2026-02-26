@@ -202,7 +202,7 @@ def plot_optimization_convergence():
     ax.axhline(y=0, color='#8b949e', linestyle='--', alpha=0.3, linewidth=0.8)
 
     ax.set_xlabel('Trial Number', fontsize=12)
-    ax.set_ylabel('Robust Score (geometric balance)', fontsize=12)
+    ax.set_ylabel('Robust Score (G_window)', fontsize=12)
     ax.set_title('Optuna Optimization Convergence  |  500 Trials  |  30 Parameters  |  5-Fold CV',
                  fontsize=13, fontweight='bold', pad=12)
     ax.legend(loc='lower right', fontsize=10, framealpha=0.3)
@@ -260,7 +260,7 @@ def plot_unified_score_distribution():
 
 def plot_cv_fold_stability():
     """
-    Bar chart of 5 CV fold metrics: win rate and geometric balance.
+    Bar chart of 5 CV fold metrics: win rate and G_window.
     Shows stable performance across folds.
     """
     folds = ['Fold 1', 'Fold 2', 'Fold 3', 'Fold 4', 'Fold 5']
@@ -286,14 +286,14 @@ def plot_cv_fold_stability():
                  f'{wr*100:.0f}%', ha='center', va='bottom', fontsize=10,
                  color=ACCENT_GREEN, fontweight='bold')
 
-    # Geometric balance
+    # G_window (per-window growth rate)
     bars2 = ax2.bar(folds, [g * 1000 for g in g_metrics], color=ACCENT_PURPLE,
                     alpha=0.8, width=0.5, edgecolor='none')
     ax2.axhline(y=np.mean(g_metrics) * 1000, color=ACCENT_ORANGE,
                 linestyle='--', linewidth=1.5, alpha=0.7,
                 label=f'Mean: {np.mean(g_metrics)*1000:.2f}')
-    ax2.set_ylabel('Geometric Balance (x1000)', fontsize=12)
-    ax2.set_title('Geometric Balance by CV Fold', fontsize=13, fontweight='bold', pad=10)
+    ax2.set_ylabel('G_window (x1000)', fontsize=12)
+    ax2.set_title('Per-Window Growth Rate by CV Fold', fontsize=13, fontweight='bold', pad=10)
     ax2.set_ylim(0, 6)
     ax2.legend(fontsize=10, framealpha=0.3)
     ax2.grid(True, axis='y', alpha=0.3)

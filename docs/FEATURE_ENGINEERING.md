@@ -86,7 +86,7 @@ No interaction terms, no nonlinearities, no feature crosses.
 
 This is a deliberate constraint, not a limitation:
 
-1. **Parameter efficiency**: 7 weights per side vs. 28+ for a model with pairwise interactions. With only ~600 market windows for training, the simpler model is less likely to overfit.
+1. **Parameter efficiency**: 7 weights per side vs. 28+ for a model with pairwise interactions. With ~5,000 market windows for training, the simpler model is less likely to overfit.
 
 2. **Interpretability**: Each weight has a direct meaning. `w_slope_long = 0.28` means slope_long contributes 0.28 units of score per unit of feature value. You can reason about why the optimizer chose each weight.
 

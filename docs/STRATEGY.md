@@ -4,9 +4,9 @@
 
 Binary BTC markets on Polymarket resolve every 15 minutes with a simple question: did BTC close above or below a specific price? Within each 15-minute window, the BTC spot price evolves stochastically -- it moves up and down with some volatility. The binary contract price reflects the market's real-time estimate of the probability that the resolution condition will be met.
 
-The key insight is temporal: as the window progresses and BTC has already moved significantly in one direction, the outcome becomes increasingly certain. If BTC needs to close above $100,000 and it's currently at $100,150 with 2 minutes left, the YES probability is very high. But the contract might still trade at $0.92 rather than $1.00 because resolution hasn't happened yet -- there's still some time remaining, and the market prices in the possibility of a reversal.
+The key insight is that binary contract prices reflect market microstructure patterns that are exploitable. Moving average features capture reversions (price dips against a prevailing direction and recovers), growing directional confidence (one side building momentum with characteristic MA signatures), and compression-expansion cycles (volatility contracting before a directional move). These patterns indicate mispricing between the binary contract and the implied spot outcome.
 
-This creates a systematic discount: the contract lags the spot reality. The "lock-in" strategy enters during this late-window phase, buying contracts at a discount to their expected resolution value.
+The "lock-in" strategy enters during the late-window phase when microstructure signals indicate a high-probability resolution direction. One side was found to be systematically overvalued in the data -- the optimizer converged on a single dominant side rather than trading both.
 
 ## Why Late-Window Works
 

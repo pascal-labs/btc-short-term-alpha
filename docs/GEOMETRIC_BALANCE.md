@@ -1,4 +1,4 @@
-# Geometric Balance Objective: Solving the Degenerate Optimization Problem
+# Optimization Objective: Solving the Degenerate Optimization Problem
 
 ## The Core Problem
 
@@ -28,49 +28,40 @@ objective = mean(returns) / std(returns)
 
 Sharpe ratio seems like it should balance frequency and quality, but in practice it's dominated by the denominator. The optimizer can inflate Sharpe by taking many similar, small, highly correlated trades. It can also game it by avoiding trades during volatile periods (when it should be trading with reduced size, not abstaining).
 
-## The Geometric Balance Solution
+## Development: From Geometric Balance to Per-Window Growth
 
-The geometric balance objective requires BOTH frequency AND quality by construction:
+The initial design computed two complementary metrics and took their geometric mean:
 
 ```
-G_window = total_log_return / n_windows    (per-window growth)
-G_trade  = total_log_return / n_trades     (per-trade growth)
+G_window = total_log_return / n_windows    (per-window growth -- rewards frequency)
+G_trade  = total_log_return / n_trades     (per-trade growth -- rewards quality)
 
 G = sqrt(G_window * G_trade)               (geometric mean)
 ```
 
-### Why These Two Metrics
+The geometric mean has an appealing property: if either component is zero, the result is zero. You can't game it by maximizing one at the expense of the other. In theory, this forces the optimizer to find parameter sets that trade frequently enough AND with sufficient quality.
 
-**G_window** is the total log return divided by the number of available market windows (not just the ones traded). This metric increases when the strategy trades more frequently -- more trades contribute more log return to the numerator while the denominator stays fixed. A strategy that trades 50% of windows has twice the opportunity to accumulate G_window compared to one that trades 25% of windows.
+**In practice, G_trade dominated.** Because n_trades is always <= n_windows, G_trade >= G_window for any positive strategy. The geometric mean was pulled toward G_trade's behavior, and the optimizer would sacrifice frequency to inflate per-trade quality -- a subtler version of Degenerate Solution 2. The geometric balance shifted the degeneracy threshold rather than eliminating it.
 
-**G_trade** is the total log return divided by the number of trades taken. This metric increases when each trade is better quality. A strategy with 80% win rate on high-R entries has higher G_trade than one with 60% win rate on mediocre entries. Taking more trades with low quality dilutes G_trade.
+## The Production Objective: G_window + Robust Scoring
 
-### Why Geometric Mean
+The production objective uses G_window alone:
 
-The geometric mean has a critical property: **if either component is zero, the result is zero.** This makes it impossible to game:
+```
+G_window = total_log_return / n_windows
+```
 
-- All-in on frequency (G_window high, G_trade low): G = sqrt(high * low) = moderate
-- All-in on quality (G_window low, G_trade high): G = sqrt(low * high) = moderate
-- Balanced (both moderate-high): G = sqrt(mod * mod) = moderate-high
+G_window rewards both frequency and quality through a single metric. More trades accumulate more log return in the numerator (frequency). Bad trades reduce the numerator (quality). The denominator is fixed -- total available windows -- so the optimizer can't game it by restricting the sample.
 
-The optimizer cannot make G large without making BOTH components large simultaneously. This is exactly the tradeoff we want: enough trades to reduce variance, each trade good enough to sustain growth.
-
-### Special Cases
-
-When both metrics are positive (the normal case), the standard geometric mean applies. When both are negative (a losing strategy), we preserve the sign: `G = -sqrt(|G_window| * |G_trade|)`. When the signs are mixed (one positive, one negative -- possible but rare), we take the minimum (conservative estimate).
+The degenerate solutions are prevented by the robust scoring layer (below) rather than by balancing two G components. This is simpler and empirically more effective.
 
 ### Connection to Kelly Criterion
 
-The use of log returns is not arbitrary. Under Kelly criterion, the growth rate of a bankroll is maximized by sizing positions to maximize expected log return. By using log returns in both G_window and G_trade, the geometric balance objective is directly optimizing for long-term growth rate.
-
-Specifically:
-- `G_window` is the compounding rate: how fast does the bankroll grow per available opportunity?
-- `G_trade` is the edge quality: how much growth does each trade contribute?
-- `G = sqrt(G_window * G_trade)` is the growth-optimal balance between trading more (capturing more opportunities) and trading better (maintaining edge per trade).
+The use of log returns is not arbitrary. Under Kelly criterion, the growth rate of a bankroll is maximized by sizing positions to maximize expected log return. G_window is directly the compounding rate: how fast does the bankroll grow per available opportunity? This makes the objective Kelly-consistent by construction.
 
 ## Robust Scoring: Worst-Case Stability
 
-The geometric balance G is computed for each cross-validation fold independently. This gives us a vector of fold scores: `[G_1, G_2, G_3, G_4, G_5]`. The robust score combines these:
+G_window is computed for each cross-validation fold independently. This gives us a vector of fold scores: `[G_1, G_2, G_3, G_4, G_5]`. The robust score combines these:
 
 ```
 robust_score = min(fold_Gs) - 0.5 * std(fold_Gs)
@@ -142,14 +133,14 @@ This ensures adequate coverage of the 30-dimensional parameter space. Without su
 
 ## Why This Beats Sharpe as an Objective
 
-| Aspect | Sharpe Ratio | Geometric Balance |
-|--------|-------------|-------------------|
-| Frequency incentive | Indirect (through mean) | Direct (G_window) |
-| Quality incentive | Indirect (through std) | Direct (G_trade) |
-| Can be gamed by | Many correlated trades | Neither component alone |
+| Aspect | Sharpe Ratio | G_window + Robust Scoring |
+|--------|-------------|---------------------------|
+| Frequency incentive | Indirect (through mean) | Direct (G_window numerator) |
+| Quality incentive | Indirect (through std) | Direct (bad trades reduce G_window) |
+| Can be gamed by | Many correlated trades | Neither -- robust scoring penalizes instability |
 | Log return consistency | No (uses arithmetic returns) | Yes (native log returns) |
 | Kelly-consistent | No | Yes |
-| Worst-case focus | No | Yes (min + std penalty) |
-| Handles rare strategies | Poorly (high variance) | Well (G_trade stays high) |
+| Worst-case focus | No | Yes (min + std penalty across folds) |
+| Overfitting resistance | Low | High (worst-fold focus + variance penalty) |
 
-The fundamental advantage is that geometric balance explicitly decomposes the optimization target into two orthogonal components (frequency and quality) and requires both to be high. Sharpe ratio conflates these into a single ratio that can be satisfied by degenerate solutions.
+The fundamental advantage is that G_window with robust scoring optimizes for consistent, growth-rate-maximizing behavior across all market regimes in the training set. Sharpe ratio conflates frequency and quality into a single ratio that can be satisfied by degenerate solutions.

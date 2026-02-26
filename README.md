@@ -1,8 +1,8 @@
 # btc-short-term-alpha
 
-Late-window entry strategy for 15-minute BTC binary markets with geometric balance optimization.
+Late-window entry strategy for 15-minute BTC binary markets.
 
-Binary BTC markets on Polymarket resolve every 15 minutes. Price evolves stochastically within each window -- once BTC has moved far enough in one direction, the binary outcome is near-certain but the contract still offers a discount because resolution hasn't occurred yet. A 7-feature linear scoring function identifies entry points in the late window. The optimizer selected a single dominant side -- the signal was asymmetric, not symmetric. Optimized via a novel geometric balance objective that prevents degenerate solutions, validated on 544 walk-forward trades at 72.4% win rate (71.3% on holdout).
+Binary BTC markets on Polymarket resolve every 15 minutes. Within each window, a 7-feature linear scoring function built from moving average microstructure detects patterns -- reversions, growing directional confidence, compression-expansion cycles -- that indicate mispricing between the binary contract and the implied spot outcome. The optimizer found that one side was systematically overvalued, converging on a single dominant side. Optimized via a per-window growth rate objective with robust cross-validation scoring, validated on 544 walk-forward trades at 72.4% win rate (71.3% on holdout).
 
 ## Architecture
 
@@ -58,7 +58,7 @@ Binary BTC markets on Polymarket resolve every 15 minutes. Price evolves stochas
 | CV folds | 5 (expanding window) |
 | Parameters | 30 (15 YES + 15 NO) |
 | Execution | FAK orders, $0.10 slippage assumption |
-| Optimization | Geometric balance objective |
+| Optimization | Per-window growth rate + robust scoring |
 
 ## Figures
 
@@ -68,13 +68,13 @@ Binary BTC markets on Polymarket resolve every 15 minutes. Price evolves stochas
 | ![Optimization Convergence](figures/optimization_convergence.png) | ![Score Distribution](figures/score_distribution.png) |
 | ![CV Fold Stability](figures/cv_fold_stability.png) | ![Entry Timing](figures/entry_timing.png) |
 
-## The Geometric Balance Innovation
+## The Optimization Objective
 
-The core problem in trading strategy optimization is balancing frequency with quality. Naive objectives produce degenerate solutions: maximizing total return leads to trading everything at any quality (low win rate, high drawdown), while maximizing per-trade return leads to trading rarely at extreme quality (too few trades, high variance). Even Sharpe ratio is dominated by trade frequency in the denominator.
+The core problem in trading strategy optimization is avoiding degenerate solutions. Maximizing total return leads to trading everything at any quality. Maximizing per-trade return leads to trading rarely at extreme quality. Even Sharpe ratio can be gamed by many correlated small trades.
 
-The geometric balance objective solves this by computing two complementary metrics and taking their geometric mean. `G_window = total_log_return / n_windows` rewards frequency (more trades means more growth per window), while `G_trade = total_log_return / n_trades` rewards quality (better trades means more growth per trade). The objective `G = sqrt(G_window * G_trade)` has a key property: if either component is zero, G is zero. You cannot game it by maximizing one at the expense of the other.
+The initial design used a geometric mean of per-window and per-trade growth rates: `G = sqrt(G_window * G_trade)`. In practice, G_trade dominated the objective -- the optimizer would sacrifice frequency to inflate per-trade quality, producing a subtler version of the same degeneracy. The production objective uses `G_window = total_log_return / n_windows` directly, which rewards both frequency (more trades accumulate more return) and quality (bad trades reduce the numerator). The degenerate solutions are prevented by the robust scoring layer rather than by balancing two G components.
 
-Robust scoring adds cross-validation stability on top: `robust_score = min(fold_Gs) - 0.5 * std(fold_Gs)`. This focuses the optimizer on worst-case fold performance and penalizes parameter sets that are unstable across folds. A parameter set with consistent but moderate performance across all 5 folds scores higher than one with high average but a single failing fold. The connection to Kelly criterion is direct -- log returns are the natural unit for growth rate optimization, and the geometric balance ensures the optimizer finds the growth-maximizing frequency-quality tradeoff.
+Robust scoring wraps the per-fold G_window values: `robust_score = min(fold_Gs) - 0.5 * std(fold_Gs)`. This focuses the optimizer on worst-case fold performance and penalizes parameter sets that are unstable across folds. A parameter set with consistent but moderate performance across all 5 folds scores higher than one with high average but a single failing fold. The connection to Kelly criterion is direct -- log returns are the natural unit for growth rate optimization.
 
 ## The Optimizer Found Asymmetry
 
@@ -86,7 +86,7 @@ This is an important empirical result, not a design choice. The strategy framewo
 
 - **Feature engineering from market microstructure** -- 5 continuous MA features extracted from binary market price series, normalized as percentage deviations for cross-market comparability
 - **Linear factor model design** -- 7-feature scoring function with interpretable weights, intentionally avoiding interaction terms to prevent overfitting on a 30-parameter space
-- **Novel optimization objective** -- Geometric balance (G = sqrt(G_window * G_trade)) that prevents degenerate frequency/quality tradeoffs, with robust scoring for worst-case fold stability
+- **Novel optimization objective** -- Per-window growth rate with robust scoring (min - 0.5*std across folds) that prevents degenerate frequency/quality tradeoffs
 - **Walk-forward cross-validation** -- 5-fold expanding windows with 20% holdout, 1,500 startup trials for adequate parameter space exploration before TPE kicks in
 - **Position sizing theory** -- Kelly-consistent log returns, score-based dynamic sizing, three-layer multiplicative system (z-score, slope, R-ratio) simplified to single-layer for production
 - **Overfitting prevention** -- Parameter count management (30 params with 1,500 startup), robust scoring (min - 0.5*std across folds), expanding-window CV preventing look-ahead bias
@@ -118,7 +118,7 @@ scripts/
 |----------|-------------|
 | [STRATEGY.md](docs/STRATEGY.md) | Lock-in thesis and entry logic |
 | [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) | The 5 MA features |
-| [GEOMETRIC_BALANCE.md](docs/GEOMETRIC_BALANCE.md) | Novel optimization objective |
+| [GEOMETRIC_BALANCE.md](docs/GEOMETRIC_BALANCE.md) | Optimization objective design and development |
 | [BACKTEST_RESULTS.md](docs/BACKTEST_RESULTS.md) | Walk-forward results |
 | [POSITION_SIZING.md](docs/POSITION_SIZING.md) | Kelly and score-based sizing |
 

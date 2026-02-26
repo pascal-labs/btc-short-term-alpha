@@ -80,11 +80,10 @@ Using Kelly-consistent log returns:
 ```
 Total log return: sum of 544 individual trade log returns
 Per-window growth (G_window): total_log_return / n_total_windows
-Per-trade growth (G_trade): total_log_return / 544
-Holdout G: 0.000374 per window
+Holdout G_window: 0.000374 per window
 ```
 
-The holdout G of 0.000374 represents the per-window growth rate on truly out-of-sample data. This is the compounding rate that drives long-term bankroll growth under the Kelly framework.
+The holdout G_window of 0.000374 represents the per-window growth rate on truly out-of-sample data. This is the compounding rate that drives long-term bankroll growth under the Kelly framework. G_window is the production objective -- it rewards both trade frequency (more trades contribute more log return to the numerator) and trade quality (bad trades reduce the numerator).
 
 ## Honest Limitations
 
@@ -108,7 +107,7 @@ The backtest assumes:
 
 ### Parameter Count Concern
 
-30 parameters on ~600 market windows is a parameter-to-sample ratio of 1:20. While the robust scoring and expanding-window CV mitigate overfitting risk, this ratio is on the aggressive side. The linear model (no interaction terms) and the geometric balance objective (which penalizes degenerate solutions) provide additional regularization, but the risk of some overfitting remains.
+30 parameters on ~5,000 market windows is a parameter-to-sample ratio of ~1:167. The robust scoring (min - 0.5*std across folds) and expanding-window CV mitigate overfitting risk. The linear model (no interaction terms) provides additional regularization. The parameter-to-sample ratio is comfortable, but the risk of regime-specific overfitting remains -- the strategy may be tuned to microstructure conditions that evolve over time.
 
 ### Market Regime Dependence
 
