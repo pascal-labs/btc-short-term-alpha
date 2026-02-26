@@ -47,7 +47,7 @@ class EntryParams:
 # Fixed constants — PARAM_PLACEHOLDER
 SLIPPAGE = None       # Fill-or-kill slippage assumption
 BASE_KELLY = None     # Base Kelly fraction for position sizing
-MIN_TICKS = 50        # Minimum ticks before entry (cold start avoidance)
+MIN_TICKS = None      # PARAM_PLACEHOLDER — minimum ticks before entry (cold start avoidance)
 
 
 def evaluate_entry(prices: np.ndarray,
@@ -87,6 +87,10 @@ def evaluate_entry(prices: np.ndarray,
         return None
 
     # Filter 2: Cold start
+    if MIN_TICKS is None:
+        raise ValueError(
+            "MIN_TICKS must be set via config — no hardcoded fallback."
+        )
     if tick < MIN_TICKS:
         return None
 
@@ -196,7 +200,11 @@ def run_single_market(cache: Dict,
             entry_price, size_mult, score = chosen
             won = outcome if chosen_side == 'yes' else not outcome
             trade_R = (1 - entry_price) / entry_price if entry_price > 0 else 0
-            f_trade = (BASE_KELLY or 0.005) * size_mult
+            if BASE_KELLY is None:
+                raise ValueError(
+                    "BASE_KELLY must be set via config — no hardcoded fallback."
+                )
+            f_trade = BASE_KELLY * size_mult
 
             if won:
                 log_return = np.log(1 + f_trade * trade_R)

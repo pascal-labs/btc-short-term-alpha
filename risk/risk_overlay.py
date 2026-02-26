@@ -57,10 +57,18 @@ class HealthOverlay:
             threshold_low: WR threshold for heavy reduction
             cooldown: Trades before allowing size recovery
         """
-        self.lookback = lookback or ROLLING_LOOKBACK or 20
-        self.threshold_high = threshold_high or THRESHOLD_HIGH or 0.6
-        self.threshold_low = threshold_low or THRESHOLD_LOW or 0.5
-        self.cooldown = cooldown or COOLDOWN_TRADES or 2
+        self.lookback = lookback or ROLLING_LOOKBACK
+        self.threshold_high = threshold_high or THRESHOLD_HIGH
+        self.threshold_low = threshold_low or THRESHOLD_LOW
+        self.cooldown = cooldown or COOLDOWN_TRADES
+
+        if any(v is None for v in [self.lookback, self.threshold_high,
+                                    self.threshold_low, self.cooldown]):
+            raise ValueError(
+                "All HealthOverlay parameters must be provided via config — "
+                "no hardcoded defaults. Set ROLLING_LOOKBACK, THRESHOLD_HIGH, "
+                "THRESHOLD_LOW, COOLDOWN_TRADES or pass constructor args."
+            )
 
         self._trade_outcomes: List[bool] = []
         self._cooldown_remaining: int = 0

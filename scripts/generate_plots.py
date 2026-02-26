@@ -45,8 +45,11 @@ def plot_equity_curve():
     np.random.seed(42)
     n_trades = 544
     win_rate = 0.724
-    kelly_frac = 0.005
+    kelly_frac = None  # PARAM_PLACEHOLDER
     avg_R = 0.90  # Average reward-to-risk ratio
+
+    # Use a generic Kelly fraction for illustrative equity curve
+    kelly_frac = kelly_frac or 0.01  # SYNTHETIC - not the real value
 
     outcomes = np.random.binomial(1, win_rate, n_trades).astype(bool)
     log_returns = np.zeros(n_trades)
@@ -115,7 +118,7 @@ def plot_feature_importance():
     Illustrative weights showing slope_long as dominant.
     """
     features = ['compression', 'slope_short', 'w_time', 'spread', 'w_R', 'dist', 'slope_long']
-    importance = [0.08, 0.11, 0.13, 0.15, 0.17, -0.19, 0.28]
+    importance = [0.12, 0.15, 0.10, 0.18, 0.14, -0.08, 0.22]  # SYNTHETIC - illustrative only
 
     colors = [ACCENT_GREEN if v > 0 else ACCENT_RED for v in importance]
 
@@ -139,7 +142,7 @@ def plot_feature_importance():
     ax.grid(True, axis='x', alpha=0.3)
 
     ax.annotate('dist is negative:\nhigh price = avoid entry',
-                xy=(-0.19, 5), xytext=(-0.32, 3.5),
+                xy=(-0.08, 5), xytext=(-0.25, 3.5),
                 fontsize=9, color='#8b949e',
                 arrowprops=dict(arrowstyle='->', color='#8b949e', lw=1))
 
@@ -261,8 +264,8 @@ def plot_cv_fold_stability():
     Shows stable performance across folds.
     """
     folds = ['Fold 1', 'Fold 2', 'Fold 3', 'Fold 4', 'Fold 5']
-    win_rates = [0.74, 0.71, 0.73, 0.72, 0.72]
-    g_metrics = [0.0041, 0.0035, 0.0044, 0.0037, 0.0039]
+    win_rates = [0.70, 0.68, 0.71, 0.69, 0.70]  # SYNTHETIC - illustrative only
+    g_metrics = [0.0032, 0.0028, 0.0035, 0.0030, 0.0031]  # SYNTHETIC - illustrative only
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
 
@@ -318,19 +321,19 @@ def plot_entry_timing():
     np.random.seed(99)
     n_entries = 544
 
-    # Most entries cluster in a specific late-window timing range
+    # SYNTHETIC - illustrative timing distribution (not real entry window)
     ticks_before = np.concatenate([
-        np.random.normal(85, 15, int(n_entries * 0.8)),    # Main cluster
-        np.random.normal(120, 20, int(n_entries * 0.15)),  # Earlier entries
-        np.random.normal(50, 10, n_entries - int(n_entries * 0.8) - int(n_entries * 0.15)),
+        np.random.normal(100, 20, int(n_entries * 0.8)),    # SYNTHETIC main cluster
+        np.random.normal(140, 25, int(n_entries * 0.15)),   # SYNTHETIC earlier entries
+        np.random.normal(60, 12, n_entries - int(n_entries * 0.8) - int(n_entries * 0.15)),
     ])
     ticks_before = np.clip(ticks_before, 20, 200).astype(int)
 
-    # Entry prices cluster in a discount range (dominant side)
+    # SYNTHETIC - illustrative price distribution (not real entry prices)
     entry_prices = np.concatenate([
-        np.random.normal(0.22, 0.06, int(n_entries * 0.7)),   # Sweet spot
-        np.random.normal(0.30, 0.05, int(n_entries * 0.2)),   # Moderate
-        np.random.normal(0.15, 0.04, n_entries - int(n_entries * 0.7) - int(n_entries * 0.2)),
+        np.random.normal(0.30, 0.08, int(n_entries * 0.7)),   # SYNTHETIC sweet spot
+        np.random.normal(0.38, 0.06, int(n_entries * 0.2)),   # SYNTHETIC moderate
+        np.random.normal(0.20, 0.05, n_entries - int(n_entries * 0.7) - int(n_entries * 0.2)),
     ])
     entry_prices = np.clip(entry_prices, 0.05, 0.50)
 
@@ -344,14 +347,14 @@ def plot_entry_timing():
     ax.scatter(ticks_before[~wins], entry_prices[~wins], s=18, alpha=0.6,
                color=ACCENT_RED, label=f'Lost ({(~wins).sum()})', zorder=3)
 
-    # Entry window boundaries (illustrative)
-    ax.axvspan(60, 110, alpha=0.06, color=ACCENT_BLUE)
-    ax.annotate('Primary entry\nwindow', xy=(85, 0.45), fontsize=10,
-                color=ACCENT_BLUE, ha='center', alpha=0.8)
+    # SYNTHETIC entry window boundaries (not real values)
+    ax.axvspan(75, 125, alpha=0.06, color=ACCENT_BLUE)  # SYNTHETIC
+    ax.annotate('Primary entry\nwindow', xy=(100, 0.45), fontsize=10,
+                color=ACCENT_BLUE, ha='center', alpha=0.8)  # SYNTHETIC
 
-    # Price cap line (illustrative)
-    ax.axhline(y=0.42, color=ACCENT_ORANGE, linestyle='--', linewidth=1.2,
-               alpha=0.5, label='Price cap (PARAM)')
+    # SYNTHETIC price cap line (not real value)
+    ax.axhline(y=0.48, color=ACCENT_ORANGE, linestyle='--', linewidth=1.2,
+               alpha=0.5, label='Price cap (PARAM)')  # SYNTHETIC
 
     ax.set_xlabel('Ticks Before Resolution', fontsize=12)
     ax.set_ylabel('Entry Price (dominant side)', fontsize=12)
